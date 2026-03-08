@@ -64,6 +64,8 @@
         .operator:hover { background: #ff6b6b; }
         .function { background: #4a6fa5; font-size: 14px; }
         .function:hover { background: #5a8fc5; }
+        .constant { background: #2d5a7b; }
+        .constant:hover { background: #3d7a9b; }
         .clear { background: #c44569; }
         .clear:hover { background: #d45579; }
         .equals { background: #00d9ff; color: #1a1a2e; }
@@ -87,10 +89,10 @@
             <button class="function" onclick="addFunc('Math.atan')">tan⁻¹</button>
             <button class="function" onclick="addFunc('Math.sqrt')">√</button>
             
-            <button class="function" onclick="addFunc('Math.PI')">π</button>
-            <button class="function" onclick="addFunc('Math.E')">e</button>
+            <button class="constant" onclick="addConstant('Math.PI')">π</button>
+            <button class="constant" onclick="addConstant('Math.E')">e</button>
             <button class="function" onclick="addOp('**')">x^y</button>
-            <button class="function" onclick="addFunc('factorial')">n!</button>
+            <button class="function" onclick="addRightParen()">)</button>
             
             <button class="clear" onclick="clearAll()">C</button>
             <button class="clear" onclick="backspace()">⌫</button>
@@ -112,7 +114,8 @@
             <button onclick="addNum('3')">3</button>
             <button class="operator" onclick="addOp('+')">+</button>
             
-            <button onclick="addNum('0')" style="grid-column: span 2">0</button>
+            <button onclick="addNum('(')">(</button>
+            <button onclick="addNum('0')">0</button>
             <button onclick="addNum('.')">.</button>
             <button class="equals" onclick="calculate()">=</button>
         </div>
@@ -121,9 +124,8 @@
     <script>
         let expression = '';
         
-        // 添加数字
+        // 添加数字或括号
         function addNum(val) {
-            // 如果当前是错误状态，清空
             if (document.getElementById('result').textContent === 'Error') {
                 clearAll();
             }
@@ -135,7 +137,6 @@
         function addOp(val) {
             if (expression === '' && val !== '-') return;
             
-            // 如果当前是错误状态，先清空
             if (document.getElementById('result').textContent === 'Error') {
                 clearAll();
                 return;
@@ -147,31 +148,50 @@
                 expression = expression.slice(0, -1);
             }
             
-            // 替换显示符号
             const opMap = {'*': '×', '/': '÷', '-': '−'};
             expression += opMap[val] || val;
             updateDisplay();
         }
         
-        // 添加函数（自动加右括号）
+        // 添加函数（加左括号）
         function addFunc(val) {
-            // 如果当前是错误状态，清空
             if (document.getElementById('result').textContent === 'Error') {
                 clearAll();
             }
-            
-            if (val === 'factorial') {
-                expression += 'factorial(';
-            } else {
-                expression += val + '(';
-            }
+            expression += val + '(';
             updateDisplay();
+        }
+        
+        // 添加常量（π 和 e）
+        function addConstant(val) {
+            if (document.getElementById('result').textContent === 'Error') {
+                clearAll();
+            }
+            expression += val;
+            updateDisplay();
+        }
+        
+        // 添加右括号
+        function addRightParen() {
+            if (document.getElementById('result').textContent === 'Error') {
+                clearAll();
+                return;
+            }
+            // 统计左括号和右括号数量，避免过多右括号
+            const leftCount = (expression.match(/\(/g) || []).length;
+            const rightCount = (expression.match(/\)/g) || []).length;
+            
+            if (leftCount > rightCount) {
+                expression += ')';
+                updateDisplay();
+            }
         }
         
         // 阶乘函数
         function factorial(n) {
             n = Math.round(n);
             if (n < 0) return NaN;
+            if (n > 170) return Infinity; // 超出 JavaScript 范围
             if (n === 0 || n === 1) return 1;
             let result = 1;
             for (let i = 2; i <= n; i++) result *= i;
@@ -183,37 +203,48 @@
             if (expression === '') return;
             
             try {
-                // 替换显示符号为计算符号
                 let expr = expression
                     .replace(/×/g, '*')
                     .replace(/÷/g, '/')
                     .replace(/−/g, '-');
                 
-                // 替换阶乘函数
-                // factorial(x) 需要计算后再应用阶乘
-                // 先计算表达式，然后对结果应用阶乘（如果有的话）
-                
-                // 简单处理：如果表达式以 factorial( 开头，提取数字并计算阶乘
-                if (expr.startsWith('factorial(')) {
-                    let match = expr.match(/factorial\((\d+)\)/);
+                // 处理阶乘 - 替换 n! 为 factorial(n)
+                // 从左到右处理每个阶乘
+                while (expr.includes('!')) {
+                    // 找到阶乘运算符前的数字
+                    let match = expr.match(/(\d+(\.\d+)?)\s*!/);
                     if (match) {
-                        let result = factorial(parseInt(match[1]));
-                        document.getElementById('result').textContent = result;
-                        expression = String(result);
-                        document.getElementById('expression').textContent = expression;
-                        return;
+                        let num = parseFloat(match[1]);
+                        let fact = factorial(num);
+                        expr = expr.replace(match[0], String(fact));
+                    } else {
+                        break;
                     }
                 }
                 
+                // 移除可能多余的开括号（如果有未匹配的）
+                // 先尝试计算
                 let result = eval(expr);
                 
                 if (typeof result === 'function') {
                     result = 0;
                 }
                 
-                document.getElementById('result').textContent = isFinite(result) ? result : 'Error';
-                expression = String(document.getElementById('result').textContent);
-                document.getElementById('expression').textContent = '';
+                if (!isFinite(result)) {
+                    document.getElementById('result').textContent = 'Error';
+                } else {
+                    // 四舍五入避免浮点误差
+                    if (Number.isInteger(result)) {
+                        document.getElementById('result').textContent = result;
+                    } else {
+                        // 保留10位小数，去除尾随0
+                        result = parseFloat(result.toPrecision(10));
+                        document.getElementById('result').textContent = result;
+                    }
+                    // 保存结果到 expression 以便连续计算
+                    expression = String(result);
+                    document.getElementById('expression').textContent = '';
+                }
             } catch (e) {
                 document.getElementById('result').textContent = 'Error';
             }
@@ -241,8 +272,7 @@
             let display = expression
                 .replace(/Math\./g, '')
                 .replace(/PI/g, 'π')
-                .replace(/E/g, 'e')
-                .replace(/factorial/g, 'n!');
+                .replace(/E/g, 'e');
             
             document.getElementById('expression').textContent = display;
             document.getElementById('result').textContent = expression || '0';
