@@ -35,6 +35,7 @@
             font-size: 14px;
             min-height: 20px;
             margin-bottom: 5px;
+            word-break: break-all;
         }
         .result {
             color: #fff;
@@ -76,43 +77,43 @@
             <div class="result" id="result">0</div>
         </div>
         <div class="buttons">
-            <button class="function" onclick="calc('sin')">sin</button>
-            <button class="function" onclick="calc('cos')">cos</button>
-            <button class="function" onclick="calc('tan')">tan</button>
-            <button class="function" onclick="calc('log')">log</button>
+            <button class="function" onclick="addFunc('Math.sin')">sin</button>
+            <button class="function" onclick="addFunc('Math.cos')">cos</button>
+            <button class="function" onclick="addFunc('Math.tan')">tan</button>
+            <button class="function" onclick="addFunc('Math.log10')">log</button>
             
-            <button class="function" onclick="calc('asin')">sin⁻¹</button>
-            <button class="function" onclick="calc('acos')">cos⁻¹</button>
-            <button class="function" onclick="calc('atan')">tan⁻¹</button>
-            <button class="function" onclick="calc('sqrt')">√</button>
+            <button class="function" onclick="addFunc('Math.asin')">sin⁻¹</button>
+            <button class="function" onclick="addFunc('Math.acos')">cos⁻¹</button>
+            <button class="function" onclick="addFunc('Math.atan')">tan⁻¹</button>
+            <button class="function" onclick="addFunc('Math.sqrt')">√</button>
             
-            <button class="function" onclick="calc('PI')">π</button>
-            <button class="function" onclick="calc('E')">e</button>
-            <button class="function" onclick="calc('^')">x^y</button>
-            <button class="function" onclick="calc('fact')">n!</button>
+            <button class="function" onclick="addFunc('Math.PI')">π</button>
+            <button class="function" onclick="addFunc('Math.E')">e</button>
+            <button class="function" onclick="addOp('**')">x^y</button>
+            <button class="function" onclick="addFunc('factorial')">n!</button>
             
             <button class="clear" onclick="clearAll()">C</button>
             <button class="clear" onclick="backspace()">⌫</button>
-            <button class="operator" onclick="calc('%')">%</button>
-            <button class="operator" onclick="calc('/')">÷</button>
+            <button class="operator" onclick="addOp('%')">%</button>
+            <button class="operator" onclick="addOp('/')">÷</button>
             
-            <button onclick="calc('7')">7</button>
-            <button onclick="calc('8')">8</button>
-            <button onclick="calc('9')">9</button>
-            <button class="operator" onclick="calc('*')">×</button>
+            <button onclick="addNum('7')">7</button>
+            <button onclick="addNum('8')">8</button>
+            <button onclick="addNum('9')">9</button>
+            <button class="operator" onclick="addOp('*')">×</button>
             
-            <button onclick="calc('4')">4</button>
-            <button onclick="calc('5')">5</button>
-            <button onclick="calc('6')">6</button>
-            <button class="operator" onclick="calc('-')">−</button>
+            <button onclick="addNum('4')">4</button>
+            <button onclick="addNum('5')">5</button>
+            <button onclick="addNum('6')">6</button>
+            <button class="operator" onclick="addOp('-')">−</button>
             
-            <button onclick="calc('1')">1</button>
-            <button onclick="calc('2')">2</button>
-            <button onclick="calc('3')">3</button>
-            <button class="operator" onclick="calc('+')">+</button>
+            <button onclick="addNum('1')">1</button>
+            <button onclick="addNum('2')">2</button>
+            <button onclick="addNum('3')">3</button>
+            <button class="operator" onclick="addOp('+')">+</button>
             
-            <button onclick="calc('0')" style="grid-column: span 2">0</button>
-            <button onclick="calc('.')">.</button>
+            <button onclick="addNum('0')" style="grid-column: span 2">0</button>
+            <button onclick="addNum('.')">.</button>
             <button class="equals" onclick="calculate()">=</button>
         </div>
     </div>
@@ -120,34 +121,56 @@
     <script>
         let expression = '';
         
-        function calc(val) {
-            const funcs = {
-                'sin': 'Math.sin',
-                'cos': 'Math.cos', 
-                'tan': 'Math.tan',
-                'asin': 'Math.asin',
-                'acos': 'Math.acos',
-                'atan': 'Math.atan',
-                'log': 'Math.log10',
-                'sqrt': 'Math.sqrt',
-                'PI': 'Math.PI',
-                'E': 'Math.E',
-                'fact': 'factorial'
-            };
+        // 添加数字
+        function addNum(val) {
+            // 如果当前是错误状态，清空
+            if (document.getElementById('result').textContent === 'Error') {
+                clearAll();
+            }
+            expression += val;
+            updateDisplay();
+        }
+        
+        // 添加运算符
+        function addOp(val) {
+            if (expression === '' && val !== '-') return;
             
-            if (funcs[val]) {
-                if (val === 'fact') {
-                    expression += 'factorial(';
-                } else {
-                    expression += funcs[val] + '(';
-                }
+            // 如果当前是错误状态，先清空
+            if (document.getElementById('result').textContent === 'Error') {
+                clearAll();
+                return;
+            }
+            
+            // 避免连续输入运算符
+            const lastChar = expression.slice(-1);
+            if (['+', '-', '*', '/', '%', '**'].includes(lastChar)) {
+                expression = expression.slice(0, -1);
+            }
+            
+            // 替换显示符号
+            const opMap = {'*': '×', '/': '÷', '-': '−'};
+            expression += opMap[val] || val;
+            updateDisplay();
+        }
+        
+        // 添加函数（自动加右括号）
+        function addFunc(val) {
+            // 如果当前是错误状态，清空
+            if (document.getElementById('result').textContent === 'Error') {
+                clearAll();
+            }
+            
+            if (val === 'factorial') {
+                expression += 'factorial(';
             } else {
-                expression += val;
+                expression += val + '(';
             }
             updateDisplay();
         }
         
+        // 阶乘函数
         function factorial(n) {
+            n = Math.round(n);
             if (n < 0) return NaN;
             if (n === 0 || n === 1) return 1;
             let result = 1;
@@ -155,47 +178,72 @@
             return result;
         }
         
+        // 计算
         function calculate() {
+            if (expression === '') return;
+            
             try {
-                // 处理阶乘
-                let expr = expression.replace(/factorial\((\d+)\)/g, '($1) => $1<=1?1:Array.from({length:$1},(_,i)=>i+1).reduce((a,b)=>a*b,1)');
-                
                 // 替换显示符号为计算符号
-                expr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                let expr = expression
+                    .replace(/×/g, '*')
+                    .replace(/÷/g, '/')
+                    .replace(/−/g, '-');
+                
+                // 替换阶乘函数
+                // factorial(x) 需要计算后再应用阶乘
+                // 先计算表达式，然后对结果应用阶乘（如果有的话）
+                
+                // 简单处理：如果表达式以 factorial( 开头，提取数字并计算阶乘
+                if (expr.startsWith('factorial(')) {
+                    let match = expr.match(/factorial\((\d+)\)/);
+                    if (match) {
+                        let result = factorial(parseInt(match[1]));
+                        document.getElementById('result').textContent = result;
+                        expression = String(result);
+                        document.getElementById('expression').textContent = expression;
+                        return;
+                    }
+                }
                 
                 let result = eval(expr);
+                
                 if (typeof result === 'function') {
-                    // 获取数字参数
-                    let match = expression.match(/factorial\((\d+)\)/);
-                    if (match) result = factorial(parseInt(match[1]));
+                    result = 0;
                 }
                 
                 document.getElementById('result').textContent = isFinite(result) ? result : 'Error';
-                expression = document.getElementById('result').textContent;
+                expression = String(document.getElementById('result').textContent);
                 document.getElementById('expression').textContent = '';
             } catch (e) {
                 document.getElementById('result').textContent = 'Error';
             }
         }
         
+        // 清空
         function clearAll() {
             expression = '';
             document.getElementById('result').textContent = '0';
             document.getElementById('expression').textContent = '';
         }
         
+        // 退格
         function backspace() {
+            if (document.getElementById('result').textContent === 'Error') {
+                clearAll();
+                return;
+            }
             expression = expression.slice(0, -1);
             updateDisplay();
         }
         
+        // 更新显示
         function updateDisplay() {
             let display = expression
                 .replace(/Math\./g, '')
                 .replace(/PI/g, 'π')
                 .replace(/E/g, 'e')
-                .replace(/\(/g, '(')
-                .replace(/\)/g, ')');
+                .replace(/factorial/g, 'n!');
+            
             document.getElementById('expression').textContent = display;
             document.getElementById('result').textContent = expression || '0';
         }
