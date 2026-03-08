@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科学计算器</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .calculator {
+            background: #16213e;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            width: 100%;
+            max-width: 400px;
+        }
+        .display {
+            background: #0f3460;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        .expression {
+            color: #888;
+            font-size: 14px;
+            min-height: 20px;
+            margin-bottom: 5px;
+        }
+        .result {
+            color: #fff;
+            font-size: 36px;
+            font-weight: 300;
+            word-break: break-all;
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        button {
+            padding: 16px;
+            font-size: 18px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #1f4068;
+            color: #fff;
+        }
+        button:active { transform: scale(0.95); }
+        button:hover { background: #2a5285; }
+        .operator { background: #e94560; }
+        .operator:hover { background: #ff6b6b; }
+        .function { background: #4a6fa5; font-size: 14px; }
+        .function:hover { background: #5a8fc5; }
+        .clear { background: #c44569; }
+        .clear:hover { background: #d45579; }
+        .equals { background: #00d9ff; color: #1a1a2e; }
+        .equals:hover { background: #33e1ff; }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <div class="expression" id="expression"></div>
+            <div class="result" id="result">0</div>
+        </div>
+        <div class="buttons">
+            <button class="function" onclick="calc('sin')">sin</button>
+            <button class="function" onclick="calc('cos')">cos</button>
+            <button class="function" onclick="calc('tan')">tan</button>
+            <button class="function" onclick="calc('log')">log</button>
+            
+            <button class="function" onclick="calc('asin')">sin⁻¹</button>
+            <button class="function" onclick="calc('acos')">cos⁻¹</button>
+            <button class="function" onclick="calc('atan')">tan⁻¹</button>
+            <button class="function" onclick="calc('sqrt')">√</button>
+            
+            <button class="function" onclick="calc('PI')">π</button>
+            <button class="function" onclick="calc('E')">e</button>
+            <button class="function" onclick="calc('^')">x^y</button>
+            <button class="function" onclick="calc('fact')">n!</button>
+            
+            <button class="clear" onclick="clearAll()">C</button>
+            <button class="clear" onclick="backspace()">⌫</button>
+            <button class="operator" onclick="calc('%')">%</button>
+            <button class="operator" onclick="calc('/')">÷</button>
+            
+            <button onclick="calc('7')">7</button>
+            <button onclick="calc('8')">8</button>
+            <button onclick="calc('9')">9</button>
+            <button class="operator" onclick="calc('*')">×</button>
+            
+            <button onclick="calc('4')">4</button>
+            <button onclick="calc('5')">5</button>
+            <button onclick="calc('6')">6</button>
+            <button class="operator" onclick="calc('-')">−</button>
+            
+            <button onclick="calc('1')">1</button>
+            <button onclick="calc('2')">2</button>
+            <button onclick="calc('3')">3</button>
+            <button class="operator" onclick="calc('+')">+</button>
+            
+            <button onclick="calc('0')" style="grid-column: span 2">0</button>
+            <button onclick="calc('.')">.</button>
+            <button class="equals" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <script>
+        let expression = '';
+        
+        function calc(val) {
+            const funcs = {
+                'sin': 'Math.sin',
+                'cos': 'Math.cos', 
+                'tan': 'Math.tan',
+                'asin': 'Math.asin',
+                'acos': 'Math.acos',
+                'atan': 'Math.atan',
+                'log': 'Math.log10',
+                'sqrt': 'Math.sqrt',
+                'PI': 'Math.PI',
+                'E': 'Math.E',
+                'fact': 'factorial'
+            };
+            
+            if (funcs[val]) {
+                if (val === 'fact') {
+                    expression += 'factorial(';
+                } else {
+                    expression += funcs[val] + '(';
+                }
+            } else {
+                expression += val;
+            }
+            updateDisplay();
+        }
+        
+        function factorial(n) {
+            if (n < 0) return NaN;
+            if (n === 0 || n === 1) return 1;
+            let result = 1;
+            for (let i = 2; i <= n; i++) result *= i;
+            return result;
+        }
+        
+        function calculate() {
+            try {
+                // 处理阶乘
+                let expr = expression.replace(/factorial\((\d+)\)/g, '($1) => $1<=1?1:Array.from({length:$1},(_,i)=>i+1).reduce((a,b)=>a*b,1)');
+                
+                // 替换显示符号为计算符号
+                expr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                
+                let result = eval(expr);
+                if (typeof result === 'function') {
+                    // 获取数字参数
+                    let match = expression.match(/factorial\((\d+)\)/);
+                    if (match) result = factorial(parseInt(match[1]));
+                }
+                
+                document.getElementById('result').textContent = isFinite(result) ? result : 'Error';
+                expression = document.getElementById('result').textContent;
+                document.getElementById('expression').textContent = '';
+            } catch (e) {
+                document.getElementById('result').textContent = 'Error';
+            }
+        }
+        
+        function clearAll() {
+            expression = '';
+            document.getElementById('result').textContent = '0';
+            document.getElementById('expression').textContent = '';
+        }
+        
+        function backspace() {
+            expression = expression.slice(0, -1);
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            let display = expression
+                .replace(/Math\./g, '')
+                .replace(/PI/g, 'π')
+                .replace(/E/g, 'e')
+                .replace(/\(/g, '(')
+                .replace(/\)/g, ')');
+            document.getElementById('expression').textContent = display;
+            document.getElementById('result').textContent = expression || '0';
+        }
+    </script>
+</body>
+</html>
